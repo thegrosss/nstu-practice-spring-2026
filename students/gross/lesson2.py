@@ -55,8 +55,8 @@ class LogisticRegression:
     def grad(self, x, y) -> tuple[np.ndarray, np.ndarray]:
         y_pred = self.predict(x)
         error = y_pred - y
-        grad_w = (2 * x.T @ error) / len(y)
-        grad_b = 2 * np.mean(error)
+        grad_w = (x.T @ error) / len(y)
+        grad_b = np.mean(error)
 
         return grad_w, grad_b
 
