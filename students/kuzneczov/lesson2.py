@@ -10,20 +10,20 @@ class LinearRegression:
         self.bias = np.array(0.0)
 
     def predict(self, x: np.ndarray) -> np.ndarray:
-        return np.matmul(x, self.weights) + self.bias
+        return x @ self.weights + self.bias
 
     def loss(self, x: np.ndarray, y: np.ndarray) -> float:
         return np.mean((y - self.predict(x)) ** 2)
 
     def metric(self, x: np.ndarray, y: np.ndarray) -> float:
-        up_sum = np.sum((y - self.predict(x)) ** 2)
-        lower_sum = np.sum((y - np.mean(y)) ** 2)
-        return 1 - up_sum / lower_sum
+        return 1 - np.sum((y - self.predict(x)) ** 2) / np.sum((y - np.mean(y)) ** 2)
 
     def grad(self, x, y) -> tuple[np.ndarray, np.ndarray]:
-        grad_weights = 2 / len(y) * np.matmul(x.T, (self.predict(x) - y))
-        grad_bias = 2 / len(y) * np.sum(self.predict(x) - y)
-        return grad_weights, grad_bias
+        weightsGrad = np.ndarray(self.weights.size)
+        biasGrad = np.ndarray(self.bias.size)
+        weightsGrad = -2 * ((y - self.predict(x)) @ x) / x.shape[0]
+        biasGrad = -2 * np.mean(y - self.predict(x))
+        return weightsGrad, biasGrad
 
 
 class LogisticRegression:
@@ -35,25 +35,34 @@ class LogisticRegression:
         self.bias = np.array(0.0)
 
     def predict(self, x: np.ndarray) -> np.ndarray:
-        return 1 / (1 + np.exp(-(np.matmul(x, (self.weights)) + self.bias)))
+        z = x @ self.weights + self.bias
+        return 1 / (1 + np.exp(-z))
 
     def loss(self, x: np.ndarray, y: np.ndarray) -> float:
-        p_i = np.clip(self.predict(x), 1e-15, 1 - 1e-15)
-        return -np.mean(y * np.log(p_i) + (1 - y) * np.log(1 - p_i))
+        predict = self.predict(x)
+        return -np.mean(y * np.log(predict) + (1 - y) * np.log(1 - predict))
 
     def metric(self, x: np.ndarray, y: np.ndarray) -> float:
-        return np.mean((self.predict(x) >= 0.5).astype(int) == y)
+        predict = self.predict(x)
+        count = 0
+        for i in range(y.size):
+            if y[i] == 1 and predict[i] >= 0.5 or y[i] == 0 and predict[i] < 0.5:
+                count += 1
+        return count / y.size
 
     def grad(self, x, y) -> tuple[np.ndarray, np.ndarray]:
-        grad_weights = 1 / len(y) * np.matmul(x.T, (self.predict(x) - y))
-        grad_bias = 1 / len(y) * np.sum(self.predict(x) - y)
-        return grad_weights, grad_bias
+        weightsGrad = np.ndarray(self.weights.size)
+        biasGrad = np.ndarray(self.bias.size)
+        predict = self.predict(x)
+        biasGrad = np.sum(predict - y) / x.shape[0]
+        weightsGrad = np.sum((predict - y) @ x) / x.shape[0]
+        return weightsGrad, biasGrad
 
 
 class Exercise:
     @staticmethod
     def get_student() -> str:
-        return "Старицын Марк Вадимович, ПМ-35"
+        return "Кузнецов Александр Павлович, ПМ-34"
 
     @staticmethod
     def get_topic() -> str:
@@ -69,8 +78,9 @@ class Exercise:
 
     @staticmethod
     def fit(model: LinearRegression | LogisticRegression, x: np.ndarray, y: np.ndarray, lr: float, n_iter: int) -> None:
-        for _ in range(n_iter):
-            grad_weights, grad_bias = model.grad(x, y)
-
-            model.weights -= lr * grad_weights
-            model.bias -= lr * grad_bias
+        for _i in range(n_iter):
+            weightsGrad = np.ndarray(model.weights.size)
+            biasGrad = np.ndarray(model.bias.size)
+            weightsGrad, biasGrad = model.grad(x, y)
+            model.weights -= weightsGrad * lr
+            model.bias -= biasGrad * lr
